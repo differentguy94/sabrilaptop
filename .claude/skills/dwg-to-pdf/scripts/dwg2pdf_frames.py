@@ -100,7 +100,7 @@ def rect_of(e):
 def detect_frames(msp, args):
     if args.frames:
         boxes = [tuple(float(v) for v in f.split(",")) for f in args.frames.split(";")]
-        return sort_frames(boxes)
+        return boxes if args.keep_order else sort_frames(boxes)
     ext = BoundingBox2d()
     rects = []
     for e in msp:
@@ -381,6 +381,7 @@ def main():
     ap.add_argument("--min-lw", type=float, default=0.10, help="minimum line width in mm (default 0.10)")
     ap.add_argument("--lw-scale", type=float, default=1.0, help="lineweight scale factor")
     ap.add_argument("--frames", help="explicit frames 'x0,y0,x1,y1;x0,y0,x1,y1;...' (skips detection)")
+    ap.add_argument("--keep-order", action="store_true", help="with --frames: keep the given order as page order")
     ap.add_argument("--frame-size", help="WxH of the frame rectangles in drawing units, e.g. 29.22x20.6")
     ap.add_argument("--layer", help="only consider rectangles on this layer for frame detection")
     ap.add_argument("--flip-file", help="text file: Arabic lines whose word order must be reversed")

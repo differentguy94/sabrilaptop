@@ -17,7 +17,8 @@ python3 $S/dwg2pdf_frames.py in.dwg -o out.pdf --page A2 --flip-file flip.txt --
 
 1. Copy the upload to the scratchpad and run `setup.sh` (idempotent; prints `setup done`).
 2. `--list-frames`: expect one line per sheet with its biggest text as title (e.g. `مخطط الكهرباء`).
-   Wrong count → `--frame-size WxH` (drawing units) or `--layer NAME`, or explicit `--frames`.
+   Wrong count → `--frame-size WxH` (drawing units) or `--layer NAME`, or explicit `--frames`
+   (`--frames "x0,y0,x1,y1;..." --keep-order` plots the boxes in the given order = page order).
 3. `--dump-arabic`: read the list once. Lines whose WORD ORDER reads backwards
    (e.g. `2م 243 = الاجمالية المساحة`, `ستيل طاولة`, `5 = العدد`) go into `flip.txt`, one per
    line, exactly as printed. Titles typed properly (`مخطط نقاط أفياش الكهرباء`) stay out.
@@ -57,6 +58,17 @@ of the last word first (e.g. `مخطط المحل` shows the final ل at the far
   copies the player per page, otherwise pages 2..n come out empty.
 - White background with true colours (`--mono` for a monochrome.ctb look), absolute lineweights
   with a 0.10 mm floor, 256-segment circles. Output is vector: resolution-independent.
+
+## Generating NEW discipline sheets from a base plan (done for Einstein Burger, Oct 2026)
+When the user wants new drawings (electrical, plumbing, HVAC, ...) drawn on copies of their plan: the
+reusable framework lives in `reference/sheet_framework/` (lib.py = Sheet class: copies one frame of the base
+plan to a new column with the title replaced, symbol primitives in the user's style, legend/notes/dimension
+helpers; build.py = assembler; SPEC.md = per-discipline requirements; disc_*.py = examples). Pitfalls:
+collect base entities by INSERT point (ezdxf's fast MTEXT bbox is wrong), purge stray entities outside the
+frames before copying, keep `\pi` prefixes when replacing title/date texts, Python module names must not
+shadow stdlib (`site`). Real DWG output: ODA File Converter (.deb from opendesign.com, needs
+`xvfb-run -a` + libopengl0 libxkbcommon-x11-0), command
+`ODAFileConverter in_dir out_dir ACAD2018 DWG 0 1 "*.dxf"`; libredwg's dxf2dwg is NOT usable.
 
 ## Deliverable wording (Arabic user)
 
