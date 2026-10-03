@@ -66,7 +66,8 @@ plan to a new column with the title replaced, symbol primitives in the user's st
 helpers; build.py = assembler; SPEC.md = per-discipline requirements; disc_*.py = examples). Pitfalls:
 collect base entities by INSERT point (ezdxf's fast MTEXT bbox is wrong), purge stray entities outside the
 frames before copying, keep `\pi` prefixes when replacing title/date texts, Python module names must not
-shadow stdlib (`site`). Real DWG output: ODA File Converter (.deb from opendesign.com, needs
+shadow stdlib (`site`), MTEXTs carrying AutoCAD dynamic-column data (`has_columns`) re-flow into a second column
+when copied/re-titled → set `_columns=None`, `defined_height=0`, drop the ACAD xdata. Real DWG output: ODA File Converter (.deb from opendesign.com, needs
 `xvfb-run -a` + libopengl0 libxkbcommon-x11-0), command
 `ODAFileConverter in_dir out_dir ACAD2018 DWG 0 1 "*.dxf"`; libredwg's dxf2dwg is NOT usable.
 
