@@ -75,3 +75,13 @@ when copied/re-titled → set `_columns=None`, `defined_height=0`, drop the ACAD
 
 Short: pages count, page size, vector, Arabic preserved, which labels' word order was
 normalised, and where the file is. No process narration.
+
+## Learning loop with the engineer (قواعد المهندس)
+`LESSONS.md` next to this file holds the engineer's corrections; `reference/corrections/` holds his corrected
+DWG/PDF files. At the start of any job, read `LESSONS.md`; when asked to compare, open his corrected file with
+`dwg2dxf` + ezdxf next to the generated one in `reference/sheet_framework/`, list the concrete differences (symbol
+shapes, text heights, layer names/colours, legend layout, where dims/callouts go, what quantities he adds) and
+append them as rules under this heading. Rules written here override the defaults above.
+
+### قواعد المهندس (تُضاف تلقائياً من المقارنات)
+- (لا توجد قواعد بعد)
