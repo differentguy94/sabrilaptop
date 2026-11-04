@@ -1,0 +1,940 @@
+<title>مسّاح المخططات</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Noto+Kufi+Arabic:wght@600;700&display=swap">
+<style>
+/* Layout: drafting table. Instrument panel on the start (right) side, the plan sheet fills the rest;
+   on phones the sheet comes first and the panel stacks under it. */
+:root {
+  --bg: #eef1f3;        /* cool drafting paper */
+  --surface: #ffffff;
+  --sunk: #e3e8eb;
+  --ink: #1b2228;       /* graphite */
+  --muted: #5b6872;
+  --rule: #cfd7dc;
+  --accent: #0d6987;    /* survey blue */
+  --accent-ink: #ffffff;
+  --accent-soft: #d6eaf1;
+  --mark: #c76d0e;      /* measuring amber */
+  --dim: #13894a;       /* dimension lines */
+  --warn: #b3401a;
+  --ok: #23774a;
+  --stage: #d7dde1;
+  --f-display: "Noto Kufi Arabic", "IBM Plex Sans Arabic", Tahoma, Arial, sans-serif;
+  --f-body: "IBM Plex Sans Arabic", Tahoma, "Segoe UI", Arial, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181c; --surface: #1a2227; --sunk: #222c32; --ink: #e4eaed; --muted: #97a6af;
+    --rule: #2d3940; --accent: #47aed1; --accent-ink: #061419; --accent-soft: #173543;
+    --mark: #f0a24a; --dim: #3fcf82; --warn: #f2875e; --ok: #59c98a; --stage: #0d1215;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181c; --surface: #1a2227; --sunk: #222c32; --ink: #e4eaed; --muted: #97a6af;
+  --rule: #2d3940; --accent: #47aed1; --accent-ink: #061419; --accent-soft: #173543;
+  --mark: #f0a24a; --dim: #3fcf82; --warn: #f2875e; --ok: #59c98a; --stage: #0d1215;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px; box-sizing: border-box;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+
+.app { direction: rtl; display: grid; grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr); gap: 12px; height: 100%; }
+.top { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.brand h1 { font-family: var(--f-display); font-weight: 700; font-size: 22px; margin: 0; letter-spacing: 0; }
+.brand p { margin: 0; color: var(--muted); }
+.top .spacer { flex: 1; }
+.btn { border: 1px solid var(--rule); background: var(--surface); border-radius: 8px; padding: 7px 12px;
+  display: inline-flex; align-items: center; gap: 6px; line-height: 1.2; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.small { padding: 4px 9px; font-size: 13px; }
+.btn[disabled] { opacity: .5; cursor: default; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 4px 11px;
+  font-size: 13px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
+.chip .tag { color: var(--mark); font-weight: 600; }
+
+.panel { display: flex; flex-direction: column; gap: 12px; overflow-y: auto; min-height: 0; padding-inline-end: 2px; }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 8px; }
+.card h2 { font-family: var(--f-display); font-size: 15px; font-weight: 600; margin: 0; display: flex;
+  justify-content: space-between; align-items: center; gap: 8px; }
+.state { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 2px 9px; font-family: var(--f-body); }
+.state.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.state.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.muted { color: var(--muted); }
+.small { font-size: 12.5px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.field { display: flex; gap: 6px; align-items: center; }
+.field input { width: 110px; border: 1px solid var(--rule); background: var(--bg); border-radius: 7px; padding: 6px 9px; }
+.calbox { border: 1px dashed var(--dim); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.checks { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--muted); }
+.list { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.list li { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 4px 0;
+  border-bottom: 1px solid var(--rule); }
+.list li:last-child { border-bottom: 0; }
+table.res { width: 100%; border-collapse: collapse; }
+table.res td, table.res th { padding: 5px 4px; border-bottom: 1px solid var(--rule); text-align: start; vertical-align: middle; }
+table.res th { font-size: 12px; color: var(--muted); font-weight: 500; }
+table.res td.a { text-align: end; white-space: nowrap; }
+table.res tr.total td { border-bottom: 0; font-weight: 600; font-size: 15px; padding-top: 8px; }
+table.res input { width: 100%; min-width: 0; border: 1px solid transparent; background: transparent; padding: 3px 5px; border-radius: 6px; }
+table.res input:hover, table.res input:focus { border-color: var(--rule); background: var(--bg); }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; margin-inline-end: 4px; }
+.x { border: 0; background: transparent; color: var(--muted); padding: 2px 6px; border-radius: 6px; }
+.x:hover { color: var(--warn); background: var(--sunk); }
+.src { font-size: 11.5px; color: var(--muted); }
+textarea.copy { width: 100%; min-height: 90px; font-family: var(--f-num); font-size: 12px; direction: rtl; }
+details.help summary { cursor: pointer; font-family: var(--f-display); font-weight: 600; font-size: 14px; }
+details.help ol { margin: 8px 0 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+.viewer { display: flex; flex-direction: column; min-width: 0; min-height: 0; gap: 8px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--rule); border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button { border: 0; background: transparent; border-radius: 6px; padding: 6px 9px; display: inline-flex; gap: 6px; align-items: center; font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:not([aria-pressed="true"]):hover { background: var(--sunk); }
+.seg svg { width: 16px; height: 16px; flex: none; }
+.hint { font-size: 13px; color: var(--muted); min-height: 1.5em; }
+.hint b { color: var(--ink); font-weight: 600; }
+.stage { position: relative; flex: 1; min-height: 0; overflow: hidden; border-radius: 10px; background: var(--stage);
+  border: 1px solid var(--rule); touch-action: none; direction: ltr; user-select: none; -webkit-user-select: none; }
+.stage.pan { cursor: grab; } .stage.panning { cursor: grabbing; } .stage.draw { cursor: crosshair; }
+.plane { position: absolute; left: 0; top: 0; transform-origin: 0 0; box-shadow: 0 1px 4px rgba(0,0,0,.18); background: #fff; }
+.plane canvas, .plane svg { position: absolute; left: 0; top: 0; display: block; }
+.plane svg { overflow: visible; pointer-events: none; }
+.status { position: absolute; inset: auto 8px 8px auto; background: color-mix(in srgb, var(--surface) 92%, transparent);
+  border: 1px solid var(--rule); border-radius: 8px; padding: 4px 9px; font-size: 12.5px; direction: rtl; pointer-events: none; }
+.status:empty { display: none; }
+.toast { position: absolute; inset: 10px 50% auto auto; transform: translateX(50%); background: var(--ink); color: var(--bg);
+  border-radius: 8px; padding: 7px 12px; font-size: 13px; direction: rtl; max-width: 90%; pointer-events: none; }
+.toast.warn { background: var(--warn); color: #fff; }
+.drop { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 2px dashed var(--accent); border-radius: 10px; font-family: var(--f-display); font-size: 18px; color: var(--ink); direction: rtl; }
+.busy { position: absolute; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--stage) 70%, transparent); direction: rtl; font-weight: 600; }
+.zoom { display: inline-flex; gap: 4px; align-items: center; }
+.pager { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; }
+
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; height: auto; }
+  .viewer { order: 1; height: 68svh; min-height: 380px; }
+  .panel { order: 2; overflow: visible; }
+  .seg button span { display: none; }
+  .seg button { padding: 7px 9px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="brand">
+      <h1>مسّاح المخططات</h1>
+      <p>ارفع مخطط PDF واحصل على المساحات بالمتر المربع.</p>
+    </div>
+    <div class="spacer"></div>
+    <div class="chips" id="chips" aria-label="الملفات المفتوحة"></div>
+    <label class="btn primary" for="file">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>
+      ارفع ملف PDF
+    </label>
+    <input type="file" id="file" accept="application/pdf,.pdf" multiple hidden>
+  </header>
+
+  <aside class="panel" id="panel">
+    <section class="card" id="scaleCard">
+      <h2>المقياس <span class="state warn" id="scaleState">غير محدد</span></h2>
+      <div id="scaleInfo" class="small muted">نحتاج طول بُعد واحد معروف لنحوّل المخطط إلى أمتار.</div>
+      <div class="calbox" id="calBox" hidden>
+        <div class="small">الطول على الورق: <span class="num" id="calPt"></span> نقطة. كم طوله الحقيقي بالمتر؟</div>
+        <div class="row">
+          <div class="field"><input id="calVal" inputmode="decimal" placeholder="مثلاً 10.2" aria-label="الطول بالمتر"><span>م</span></div>
+          <button class="btn small primary" id="calApply">اعتماد</button>
+          <button class="btn small" id="calCancel">إلغاء</button>
+        </div>
+      </div>
+      <div class="checks" id="checks"></div>
+      <div class="row"><button class="btn small" id="calStart">معايرة يدوية</button><span class="small muted" id="dimCount"></span></div>
+    </section>
+
+    <section class="card">
+      <h2>مكتوب على المخطط</h2>
+      <ul class="list" id="labels"></ul>
+    </section>
+
+    <section class="card">
+      <h2>المساحات <button class="btn small" id="copyBtn">نسخ الجدول</button></h2>
+      <table class="res">
+        <thead><tr><th>الاسم</th><th style="text-align:end">م²</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <textarea class="copy" id="copyArea" hidden readonly aria-label="نص الجدول للنسخ"></textarea>
+      <div class="row"><button class="btn small" id="clearBtn">مسح الكل</button><span class="small muted" id="clearAsk"></span></div>
+    </section>
+
+    <details class="help card">
+      <summary>طريقة الاستخدام</summary>
+      <ol class="small">
+        <li>ارفع ملف المخطط PDF (المصدّر من أوتوكاد). تقدر ترفع أكثر من ملف، والجدول يجمعهم.</li>
+        <li>المقياس: إذا الأبعاد مكتوبة كنص يُحسب تلقائياً. إذا لا، اختر «معايرة» واضغط على أي خط بُعد أخضر واكتب رقمه.</li>
+        <li>«غرفة بنقرة»: اضغط داخل أي مكان مغلق. إذا كان فيه باب مفتوح ارسم «خط إغلاق» عبره أولاً.</li>
+        <li>«مضلع» أو «مستطيل» للمناطق المفتوحة: اضغط على الزوايا، والمؤشر يلتقط أطراف الخطوط تلقائياً.</li>
+        <li>«نسخ الجدول» ينسخ الأسماء والمساحات لتلصقها في Excel أو عرض السعر.</li>
+      </ol>
+    </details>
+  </aside>
+
+  <section class="viewer">
+    <div class="toolbar">
+      <div class="seg" role="toolbar" aria-label="الأدوات" id="tools">
+        <button data-mode="wand" title="غرفة بنقرة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 9l6 3-3 1-1 3z" fill="currentColor"/></svg><span>غرفة بنقرة</span></button>
+        <button data-mode="poly" title="مضلع"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18L6 5l9 2 5 8-7 5z"/></svg><span>مضلع</span></button>
+        <button data-mode="rect" title="مستطيل"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12"/></svg><span>مستطيل</span></button>
+        <button data-mode="barrier" title="خط إغلاق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4M10 12h4M17 12h4"/><path d="M3 5v14M21 5v14"/></svg><span>خط إغلاق</span></button>
+        <button data-mode="calib" title="معايرة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16L16 3l5 5L8 21z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg><span>معايرة</span></button>
+        <button data-mode="pan" title="تحريك"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg><span>تحريك</span></button>
+      </div>
+      <div class="row">
+        <div class="pager" id="pager" hidden>
+          <button class="btn small" id="prevPg" aria-label="الصفحة السابقة">›</button>
+          <span>صفحة <span class="num" id="pgNo">1</span> من <span class="num" id="pgCnt">1</span></span>
+          <button class="btn small" id="nextPg" aria-label="الصفحة التالية">‹</button>
+        </div>
+        <div class="zoom">
+          <button class="btn small" id="zIn" aria-label="تكبير">+</button>
+          <button class="btn small" id="zOut" aria-label="تصغير">−</button>
+          <button class="btn small" id="zFit">ملء الشاشة</button>
+        </div>
+      </div>
+    </div>
+    <div class="hint" id="hint"></div>
+    <div class="stage draw" id="stage">
+      <div class="plane" id="plane">
+        <canvas id="pdfCanvas"></canvas>
+        <canvas id="fillCanvas"></canvas>
+        <svg id="ov" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="toast" id="toast" hidden></div>
+      <div class="drop" id="drop" hidden>أفلت ملف PDF هنا</div>
+      <div class="busy" id="busy" hidden>جاري قراءة المخطط…</div>
+    </div>
+  </section>
+</div>
+
+<!-- pdf.js 3.11.174 from jsDelivr's npm mirror (byte-identical to the npm package, so the SRI hashes hold).
+     The worker script is loaded on the page on purpose: pdf.js then parses on the main thread and needs no Web Worker. -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js" integrity="sha384-SnzOobpRMLXZ52iJvZm/C0fYw0OQemTXzTjIsdsfMcrCtCEe9qgzxTd3RSklO5x2" crossorigin="anonymous"></script>
+<script>
+(() => {
+"use strict";
+const SAMPLE_B64 = "__SAMPLE_PDF_BASE64__";
+const SAMPLE_SEEDS = [[320.1, 297.8, "صالة الجلوس"], [405.1, 198.5, "المطبخ"]];
+const COLORS = ["#0d6987", "#c76d0e", "#7b3fa0", "#23774a", "#b3401a", "#2f6fd0", "#8a6d00", "#a3285f"];
+const $ = (id) => document.getElementById(id);
+const pdfjs = window.pdfjsLib;
+if (pdfjs) pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+
+// ------------------------------------------------------------------ state
+const files = [];
+let F = null, PS = null;               // current file, current page state
+let mode = "wand";
+let results = [];
+let nextId = 1, nextFileId = 1;
+const view = { s: 1, tx: 0, ty: 0 };
+let draft = null;                     // {kind, pts:[]}
+let cal = null;                       // pending calibration {L, pts | dim}
+let hover = null;                     // snapped cursor point
+let flash = null;                     // temporary leak preview {runs}
+let hiRow = null;
+
+// ------------------------------------------------------------------ helpers
+const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩", FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+function normDigits(s) {
+  return s.replace(/[٠-٩]/g, (d) => AR_DIGITS.indexOf(d)).replace(/[۰-۹]/g, (d) => FA_DIGITS.indexOf(d))
+          .replace(/[٫،]/g, ".");
+}
+function parseNum(s) {
+  if (s == null) return NaN;
+  s = normDigits(String(s)).trim().replace(/\s+/g, "").replace(",", ".");
+  return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+}
+const fmt = (v, d = 2) => v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+function shoelace(p) { let a = 0; for (let i = 0; i < p.length; i++) { const q = p[(i + 1) % p.length]; a += p[i][0] * q[1] - q[0] * p[i][1]; } return Math.abs(a) / 2; }
+function toast(msg, warn = false, ms = 3200) {
+  const t = $("toast"); t.textContent = msg; t.className = "toast" + (warn ? " warn" : ""); t.hidden = false;
+  clearTimeout(toast._t); toast._t = setTimeout(() => (t.hidden = true), ms);
+}
+function store(key, val) { try { if (val === undefined) return JSON.parse(localStorage.getItem(key) || "null"); localStorage.setItem(key, JSON.stringify(val)); } catch (e) { return null; } }
+
+// ------------------------------------------------------------------ loading
+async function openPdf(bytes, name, example = false) {
+  if (!pdfjs) { toast("تعذّر تحميل قارئ PDF. تأكد من الاتصال بالإنترنت ثم أعد تحميل الصفحة.", true, 8000); return; }
+  $("busy").hidden = false;
+  try {
+    const pdf = await pdfjs.getDocument({ data: bytes, isEvalSupported: false, disableFontFace: true }).promise;  // text as paths: no font loading, CSP-safe
+    const f = { id: nextFileId++, name, pdf, numPages: pdf.numPages, pageNo: 1, k: null, kInfo: null, pages: new Map(), example };
+    const saved = store("msaha:k:" + name + ":" + bytes.length);
+    if (saved && saved.k) { f.k = saved.k; f.kInfo = saved.info; f.kSrc = "saved"; }
+    f.sizeKey = name + ":" + bytes.length;
+    files.push(f);
+    await showFile(f, 1);
+    return f;
+  } catch (e) {
+    console.error(e);
+    toast("هذا الملف لا يُقرأ كـ PDF. جرّب ملفاً آخر.", true, 6000);
+  } finally { $("busy").hidden = true; }
+}
+
+async function handleFiles(list) {
+  const pdfs = [...list].filter((f) => /\.pdf$/i.test(f.name) || f.type === "application/pdf");
+  if (!pdfs.length) { toast("اختر ملفاً بصيغة PDF.", true); return; }
+  // the example goes away as soon as real files arrive
+  const ex = files.filter((f) => f.example);
+  if (ex.length) { results = results.filter((r) => !ex.some((f) => f.id === r.fileId)); ex.forEach((f) => files.splice(files.indexOf(f), 1)); F = null; }
+  for (const file of pdfs) {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    await openPdf(buf, file.name);
+  }
+  renderChips(); renderRows();
+}
+
+async function showFile(f, pageNo) {
+  F = f; f.pageNo = pageNo;
+  let ps = f.pages.get(pageNo);
+  if (!ps) { $("busy").hidden = false; ps = await buildPage(f, pageNo); f.pages.set(pageNo, ps); $("busy").hidden = true; }
+  PS = ps;
+  // keep memory bounded: drop rasters of other pages
+  for (const g of files) for (const [n, p] of g.pages) if (p !== ps && p.canvas) { p.canvas = null; p.ink = null; p.mask = null; }
+  if (!ps.canvas) await rasterize(f, ps);
+  const c = $("pdfCanvas"), fc = $("fillCanvas"), ov = $("ov");
+  c.width = ps.cw; c.height = ps.ch; c.getContext("2d").drawImage(ps.canvas, 0, 0);
+  fc.width = ps.cw; fc.height = ps.ch;
+  for (const el of [c, fc, ov]) { el.style.width = ps.cw + "px"; el.style.height = ps.ch + "px"; }
+  ov.setAttribute("width", ps.cw); ov.setAttribute("height", ps.ch); ov.setAttribute("viewBox", `0 0 ${ps.W} ${ps.H}`);
+  $("plane").style.width = ps.cw + "px"; $("plane").style.height = ps.ch + "px";
+  $("pager").hidden = f.numPages < 2; $("pgNo").textContent = pageNo; $("pgCnt").textContent = f.numPages;
+  draft = null; cal = null; $("calBox").hidden = true;
+  if (!f.k && ps.auto) applyScale(ps.auto.k, `تلقائي من ${ps.auto.n} أبعاد مكتوبة`, "auto", false);
+  fit(); paintFills(); renderAll();
+}
+
+async function buildPage(f, n) {
+  const page = await f.pdf.getPage(n);
+  const vp1 = page.getViewport({ scale: 1 });
+  const ps = { n, page, vp1, W: vp1.width, H: vp1.height, barriers: [] };
+  ps.R = Math.max(1, Math.min(3, Math.sqrt(4.2e6 / (ps.W * ps.H))));
+  ps.cw = Math.round(ps.W * ps.R); ps.ch = Math.round(ps.H * ps.R);
+  try { ps.paths = await extractPaths(page, vp1); } catch (e) { console.warn(e); ps.paths = []; }
+  ps.ends = indexEnds(ps.paths);
+  ps.dims = findDims(ps.paths);
+  await rasterize(f, ps);
+  try { const tc = await page.getTextContent(); readText(ps, tc.items); } catch (e) { console.warn(e); ps.nums = []; ps.labels = []; }
+  ps.auto = autoScale(ps.dims, ps.nums);
+  return ps;
+}
+
+async function rasterize(f, ps) {
+  const cv = document.createElement("canvas"); cv.width = ps.cw; cv.height = ps.ch;
+  const ctx = cv.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+  const vp = ps.page.getViewport({ scale: ps.R });
+  await ps.page.render({ canvasContext: ctx, viewport: vp }).promise;
+  ps.canvas = cv;
+  const d = ctx.getImageData(0, 0, cv.width, cv.height).data, N = cv.width * cv.height;
+  const ink = new Uint8Array(N);
+  for (let i = 0, j = 0; i < N; i++, j += 4) {
+    const r = d[j], g = d[j + 1], b = d[j + 2];
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    if (r + g + b < 690 || mx - mn > 60) ink[i] = 1;
+  }
+  eraseDims(ps, ink);
+  ps.ink = ink; rebuildMask(ps);
+}
+
+// Dimension lines often run straight across a room; they must not stop the room fill.
+// Erase them from the mask, except where another line (a wall, a glass line) crosses them.
+function eraseDims(ps, ink) {
+  const R = ps.R, w = ps.cw, h = ps.ch, orig = ink.slice();
+  const hw = Math.max(1, Math.round(R * 0.6)) + 1, probe = hw + 2, end = Math.ceil(4 * R);
+  for (const d of ps.dims || []) {
+    const c = Math.round(d.c * R), lo = Math.round(d.lo * R) + end, hi = Math.round(d.hi * R) - end;
+    for (let t = lo; t <= hi; t++) {
+      if (d.ori === "H") {
+        if (c - probe < 0 || c + probe >= h || t < 0 || t >= w) continue;
+        if (orig[(c - probe) * w + t] && orig[(c + probe) * w + t]) continue;
+        for (let k = -hw; k <= hw; k++) ink[(c + k) * w + t] = 0;
+      } else {
+        if (c - probe < 0 || c + probe >= w || t < 0 || t >= h) continue;
+        if (orig[t * w + c - probe] && orig[t * w + c + probe]) continue;
+        for (let k = -hw; k <= hw; k++) ink[t * w + c + k] = 0;
+      }
+    }
+  }
+}
+
+function rebuildMask(ps) {
+  const m = ps.ink.slice();
+  for (const b of ps.barriers) rasterLine(m, ps, b[0], b[1]);
+  ps.mask = m;
+}
+function rasterLine(m, ps, a, b) {
+  const R = ps.R, w = ps.cw, h = ps.ch;
+  let x0 = a[0] * R, y0 = a[1] * R; const x1 = b[0] * R, y1 = b[1] * R;
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) * 2) + 1;
+  for (let i = 0; i <= n; i++) {
+    const x = Math.round(x0 + (x1 - x0) * i / n), y = Math.round(y0 + (y1 - y0) * i / n);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h) m[Y * w + X] = 1;
+    }
+  }
+}
+
+// ------------------------------------------------------------------ vector geometry from the PDF
+async function extractPaths(page, vp1) {
+  const ops = await page.getOperatorList();
+  const O = pdfjs.OPS, U = pdfjs.Util;
+  let ctm = [1, 0, 0, 1, 0, 0]; const st = []; const paths = [];
+  const T = (x, y) => { const p = U.applyTransform([x, y], ctm); return vp1.convertToViewportPoint(p[0], p[1]); };
+  const fn = ops.fnArray, ar = ops.argsArray;
+  for (let i = 0; i < fn.length; i++) {
+    const op = fn[i], a = ar[i];
+    if (op === O.save) st.push(ctm.slice());
+    else if (op === O.restore) { if (st.length) ctm = st.pop(); }
+    else if (op === O.transform) ctm = U.transform(ctm, a);
+    else if (op === O.paintFormXObjectBegin) { st.push(ctm.slice()); if (a && a[0]) ctm = U.transform(ctm, a[0]); }
+    else if (op === O.paintFormXObjectEnd) { if (st.length) ctm = st.pop(); }
+    else if (op === O.constructPath) {
+      const pops = a[0], pa = a[1]; let j = 0, cx = 0, cy = 0, sx = 0, sy = 0; const segs = [];
+      for (const p of pops) {
+        if (p === O.moveTo) { [cx, cy] = T(pa[j], pa[j + 1]); sx = cx; sy = cy; j += 2; }
+        else if (p === O.lineTo) { const [x, y] = T(pa[j], pa[j + 1]); segs.push([cx, cy, x, y, 0]); cx = x; cy = y; j += 2; }
+        else if (p === O.curveTo) { const [x, y] = T(pa[j + 4], pa[j + 5]); segs.push([cx, cy, x, y, 1]); cx = x; cy = y; j += 6; }
+        else if (p === O.curveTo2 || p === O.curveTo3) { const [x, y] = T(pa[j + 2], pa[j + 3]); segs.push([cx, cy, x, y, 1]); cx = x; cy = y; j += 4; }
+        else if (p === O.closePath) { if (cx !== sx || cy !== sy) segs.push([cx, cy, sx, sy, 0]); cx = sx; cy = sy; }
+        else if (p === O.rectangle) {
+          const x = pa[j], y = pa[j + 1], w = pa[j + 2], h = pa[j + 3];
+          const q = [T(x, y), T(x + w, y), T(x + w, y + h), T(x, y + h)];
+          for (let k = 0; k < 4; k++) segs.push([q[k][0], q[k][1], q[(k + 1) % 4][0], q[(k + 1) % 4][1], 0]);
+          cx = sx = q[0][0]; cy = sy = q[0][1]; j += 4;
+        }
+      }
+      if (segs.length) paths.push(segs);
+    }
+  }
+  return paths;
+}
+
+function indexEnds(paths) {
+  const G = new Map(), C = 6;
+  const add = (x, y) => { const k = Math.floor(x / C) + "," + Math.floor(y / C); let a = G.get(k); if (!a) G.set(k, (a = [])); if (!a.some((p) => Math.abs(p[0] - x) < 0.05 && Math.abs(p[1] - y) < 0.05)) a.push([x, y]); };
+  for (const segs of paths) for (const s of segs) { add(s[0], s[1]); add(s[2], s[3]); }
+  return { G, C };
+}
+function snap(pt, rPt) {
+  const { G, C } = PS.ends; let best = null, bd = rPt;
+  const gx = Math.floor(pt[0] / C), gy = Math.floor(pt[1] / C), n = Math.ceil(rPt / C);
+  for (let i = gx - n; i <= gx + n; i++) for (let j = gy - n; j <= gy + n; j++) {
+    const a = G.get(i + "," + j); if (!a) continue;
+    for (const p of a) { const d = Math.hypot(p[0] - pt[0], p[1] - pt[1]); if (d < bd) { bd = d; best = p; } }
+  }
+  return best;
+}
+
+// dimension line = long horizontal/vertical line with a 45-degree tick at each end (AutoCAD architectural ticks)
+function findDims(paths) {
+  const dims = [];
+  for (const segs of paths) {
+    const ticks = [], longs = [];
+    for (const s of segs) {
+      if (s[4]) continue;
+      const dx = s[2] - s[0], dy = s[3] - s[1], L = Math.hypot(dx, dy);
+      if (L > 2.5 && L < 12 && Math.abs(Math.abs(dx) - Math.abs(dy)) < 0.2 * L) ticks.push([(s[0] + s[2]) / 2, (s[1] + s[3]) / 2]);
+      else if (L >= 8 && (Math.abs(dx) < 0.3 || Math.abs(dy) < 0.3)) longs.push(s);
+    }
+    if (ticks.length < 2 || !longs.length) continue;
+    const found = [];
+    for (let i = 0; i < ticks.length; i++) for (let j = i + 1; j < ticks.length; j++) {
+      const a = ticks[i], b = ticks[j]; let ori, lo, hi, c;
+      if (Math.abs(a[1] - b[1]) < 0.5) { ori = "H"; lo = Math.min(a[0], b[0]); hi = Math.max(a[0], b[0]); c = (a[1] + b[1]) / 2; }
+      else if (Math.abs(a[0] - b[0]) < 0.5) { ori = "V"; lo = Math.min(a[1], b[1]); hi = Math.max(a[1], b[1]); c = (a[0] + b[0]) / 2; }
+      else continue;
+      let cov = 0;
+      for (const s of longs) {
+        if (ori === "H" && Math.abs(s[1] - c) < 0.6 && Math.abs(s[3] - c) < 0.6) cov += Math.max(0, Math.min(Math.max(s[0], s[2]), hi) - Math.max(Math.min(s[0], s[2]), lo));
+        if (ori === "V" && Math.abs(s[0] - c) < 0.6 && Math.abs(s[2] - c) < 0.6) cov += Math.max(0, Math.min(Math.max(s[1], s[3]), hi) - Math.max(Math.min(s[1], s[3]), lo));
+      }
+      if (cov > 0.4 * (hi - lo)) found.push({ ori, lo, hi, c, L: hi - lo });
+    }
+    for (const d of found) if (!found.some((e) => e !== d && e.ori === d.ori && Math.abs(e.c - d.c) < 0.6 && e.lo >= d.lo - 0.01 && e.hi <= d.hi + 0.01 && e.L < d.L)) dims.push(d);
+  }
+  return dims;
+}
+
+// ------------------------------------------------------------------ text: numbers next to dimensions, area labels
+function readText(ps, items) {
+  const toVp = (x, y) => ps.vp1.convertToViewportPoint(x, y);
+  const its = [];
+  for (const it of items) {
+    if (!it.str || !it.str.trim()) continue;
+    const [a, b] = it.transform, e = it.transform[4], f = it.transform[5];
+    const size = Math.hypot(a, b) || it.height || 10, ang = Math.atan2(b, a);
+    const ux = Math.cos(ang), uy = Math.sin(ang);
+    const w = it.width || size * it.str.length * 0.5;
+    const c = toVp(e + ux * w / 2 - uy * size * 0.35, f + uy * w / 2 + ux * size * 0.35);
+    const p0 = toVp(e, f), p1 = toVp(e + ux * w, f + uy * w);
+    its.push({ str: it.str, size, ang, c, p0, p1 });
+  }
+  ps.nums = [];
+  for (const t of its) { const v = parseNum(t.str); if (isFinite(v) && v > 0) ps.nums.push({ v, x: t.c[0], y: t.c[1], h: t.size }); }
+  // group into lines (same angle, close baselines), then look for area wording + a number
+  const lines = [];
+  for (const t of its) {
+    let L = lines.find((l) => Math.abs(l.ang - t.ang) < 0.05 && Math.abs(l.size - t.size) < 0.35 * l.size &&
+      perpDist(l, t.c) < 0.6 * l.size && alongGap(l, t) < 3 * l.size);
+    if (!L) { L = { ang: t.ang, size: t.size, items: [], c0: t.c }; lines.push(L); }
+    L.items.push(t);
+  }
+  ps.labels = [];
+  for (const l of lines) {
+    let s = l.items.map((t) => t.str).join(" ").normalize("NFKC").replace(/[\u0467\u0640\uFFFD]/g, "");
+    s = normDigits(s);
+    const isArea = /مساح|المس|احة|مسطح|area/i.test(s) || /(?:^|\s)[مm]\s*2(?:\s|$)/.test(s);
+    if (!isArea) continue;
+    const t = s.replace(/[مm]\s*2/g, " ");
+    const m = t.match(/\d+(?:[.,]\d+)?/g); if (!m) continue;
+    for (const v of m) { const val = parseFloat(v.replace(",", ".")); if (val >= 1 && val <= 1e6) ps.labels.push({ v: val, x: l.items[0].c[0], y: l.items[0].c[1] }); }
+  }
+  function perpDist(l, c) { const nx = -Math.sin(-l.ang), ny = Math.cos(-l.ang); return Math.abs((c[0] - l.c0[0]) * nx + (c[1] - l.c0[1]) * ny); }
+  function alongGap(l, t) { const ux = Math.cos(-l.ang), uy = Math.sin(-l.ang); let best = 1e9;
+    for (const o of l.items) { const d = Math.abs((t.c[0] - o.c[0]) * ux + (t.c[1] - o.c[1]) * uy); best = Math.min(best, d); } return best; }
+}
+
+function autoScale(dims, nums) {
+  if (!dims.length || !nums.length) return null;
+  const pairs = [];
+  for (const d of dims) {
+    const mid = (d.lo + d.hi) / 2; let best = null;
+    for (const t of nums) {
+      const along = d.ori === "H" ? t.x : t.y, perp = d.ori === "H" ? t.y : t.x;
+      if (Math.abs(perp - d.c) < Math.max(12, 1.6 * t.h) && along > d.lo && along < d.hi) {
+        const dist = Math.abs(along - mid) + Math.abs(perp - d.c);
+        if (!best || dist < best.dist) best = { v: t.v, dist };
+      }
+    }
+    if (best) pairs.push({ L: d.L, v: best.v });
+  }
+  if (pairs.length < 2) return null;
+  const ks = pairs.map((p) => p.L / p.v).sort((a, b) => a - b), med = ks[ks.length >> 1];
+  const good = pairs.filter((p) => Math.abs(p.L / p.v / med - 1) < 0.01);
+  if (good.length < 2 || good.length < 0.5 * pairs.length) return null;
+  let k = good.reduce((s, p) => s + p.L * p.v, 0) / good.reduce((s, p) => s + p.v * p.v, 0);
+  // the numbers may be cm or mm: pick the unit that gives a believable print scale (1:20 .. 1:2000)
+  for (const f of [1, 100, 1000]) { const N = 1000 / (k * f * 0.352778); if (N >= 20 && N <= 2000) { k *= f; break; } }
+  return { k, n: good.length };
+}
+
+// ------------------------------------------------------------------ scale
+function applyScale(k, info, src, persist = true) {
+  F.k = k; F.kInfo = info; F.kSrc = src;
+  if (persist) store("msaha:k:" + F.sizeKey, { k, info });
+  renderAll();
+}
+function scaleText(k) { const N = 1000 / (k * 0.352778); return `1 م = <span class="num">${fmt(k, 2)}</span> نقطة · مقياس الطباعة ≈ <span class="num">1:${Math.round(N)}</span>`; }
+
+// ------------------------------------------------------------------ magic wand (raster flood fill)
+function wandAt(pt) {
+  const w = PS.cw, h = PS.ch, m = PS.mask, R = PS.R;
+  let x = Math.round(pt[0] * R), y = Math.round(pt[1] * R);
+  if (x < 0 || y < 0 || x >= w || y >= h) return null;
+  if (m[y * w + x]) { // clicked on a line: look for free space next to it
+    let found = false;
+    for (let r = 1; r <= 4 && !found; r++) for (let dy = -r; dy <= r && !found; dy++) for (let dx = -r; dx <= r && !found; dx++) {
+      const X = x + dx, Y = y + dy; if (X >= 0 && Y >= 0 && X < w && Y < h && !m[Y * w + X]) { x = X; y = Y; found = true; }
+    }
+    if (!found) return { err: "اضغط داخل المساحة وليس على خط." };
+  }
+  const reg = new Uint8Array(w * h);
+  const r1 = spanFill(m, reg, w, h, [y * w + x]);
+  if (r1.touches || r1.count > 0.85 * w * h) return { leak: true, runs: ptRuns(toRuns(reg, w, h), R) };
+  // fill holes (furniture, text, columns inside the room): everything not reachable from the border
+  const out = new Uint8Array(w * h), seeds = [];
+  for (let X = 0; X < w; X++) { seeds.push(X, (h - 1) * w + X); }
+  for (let Y = 0; Y < h; Y++) { seeds.push(Y * w, Y * w + w - 1); }
+  spanFill(reg, out, w, h, seeds.filter((i) => !reg[i]));
+  const solid = new Uint8Array(w * h); let n = 0;
+  for (let i = 0; i < w * h; i++) if (!out[i]) { solid[i] = 1; n++; }
+  // The room ends at the CENTRE of its wall lines, but the fill stops at their inner edge.
+  // Measure the drawn line thickness at the boundary (median) and add half of it all round.
+  let edge = 0; const thick = [];
+  const steps = [1, -1, w, -w];
+  for (let i = w; i < w * h - w; i++) {
+    if (solid[i]) continue;
+    for (const s of steps) {
+      if (!solid[i - s]) continue;
+      edge++;
+      if ((edge & 7) === 0) { let t = 0, j = i; while (t < 12 && m[j] && j > 0 && j < w * h) { t++; j += s; } thick.push(t); }
+      break;
+    }
+  }
+  thick.sort((a, b) => a - b);
+  const T = thick.length ? thick[thick.length >> 1] : 1;
+  const px = n + edge * Math.min(T, 8) / 2;
+  return { areaPt2: px / (R * R), runs: ptRuns(toRuns(solid, w, h), R) };
+}
+function ptRuns(o, R) { o.cx /= R; o.cy /= R; return o; }
+function spanFill(block, mark, w, h, seeds) {
+  let count = 0, touches = false; const st = seeds.slice();
+  while (st.length) {
+    const i = st.pop(); if (block[i] || mark[i]) continue;
+    const y = (i / w) | 0, x = i - y * w, base = y * w;
+    let l = x, r = x;
+    while (l > 0 && !block[base + l - 1] && !mark[base + l - 1]) l--;
+    while (r < w - 1 && !block[base + r + 1] && !mark[base + r + 1]) r++;
+    if (l === 0 || r === w - 1 || y === 0 || y === h - 1) touches = true;
+    for (let k = l; k <= r; k++) mark[base + k] = 1;
+    count += r - l + 1;
+    for (const ny of [y - 1, y + 1]) {
+      if (ny < 0 || ny >= h) continue; const nb = ny * w; let run = false;
+      for (let k = l; k <= r; k++) { const j = nb + k; const free = !block[j] && !mark[j];
+        if (free && !run) { st.push(j); run = true; } else if (!free) run = false; }
+    }
+  }
+  return { count, touches };
+}
+function toRuns(bits, w, h) {
+  const runs = []; let sx = 0, sy = 0, n = 0;
+  for (let y = 0; y < h; y++) { const b = y * w; let x = 0;
+    while (x < w) { if (bits[b + x]) { const s = x; while (x < w && bits[b + x]) x++; runs.push(b + s, x - s); sx += (s + x - 1) / 2 * (x - s); sy += y * (x - s); n += x - s; } else x++; } }
+  return { runs, cx: n ? sx / n : 0, cy: n ? sy / n : 0 };
+}
+function paintFills() {
+  const fc = $("fillCanvas"), ctx = fc.getContext("2d");
+  ctx.clearRect(0, 0, fc.width, fc.height);
+  if (!PS) return;
+  const img = ctx.createImageData(fc.width, fc.height), d = img.data;
+  const paint = (runs, hex, alpha) => {
+    const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    for (let k = 0; k < runs.length; k += 2) for (let i = runs[k], e = runs[k] + runs[k + 1]; i < e; i++) { const j = i * 4; d[j] = r; d[j + 1] = g; d[j + 2] = b; d[j + 3] = alpha; }
+  };
+  for (const r of results) if (r.kind === "wand" && r.fileId === F.id && r.page === PS.n) paint(r.geom.runs, r.color, r.id === hiRow ? 120 : 70);
+  if (flash) paint(flash.runs, "#d02a1a", 90);
+  ctx.putImageData(img, 0, 0);
+}
+
+// ------------------------------------------------------------------ view (pan / zoom)
+function applyView() { $("plane").style.transform = `translate(${view.tx}px, ${view.ty}px) scale(${view.s / PS.R})`; drawOverlay(); }
+function fit() {
+  const st = $("stage").getBoundingClientRect();
+  const s = Math.min((st.width - 24) / PS.W, (st.height - 24) / PS.H);
+  view.s = s > 0 ? s : 1; view.tx = (st.width - PS.W * view.s) / 2; view.ty = (st.height - PS.H * view.s) / 2; applyView();
+}
+function zoomAt(f, cx, cy) {
+  const s2 = Math.max(0.05, Math.min(60, view.s * f)); const r = s2 / view.s;
+  view.tx = cx - (cx - view.tx) * r; view.ty = cy - (cy - view.ty) * r; view.s = s2; applyView();
+}
+function toPt(ev) { const r = $("stage").getBoundingClientRect(); return [(ev.clientX - r.left - view.tx) / view.s, (ev.clientY - r.top - view.ty) / view.s]; }
+function toScreen(p) { return [p[0] * view.s + view.tx, p[1] * view.s + view.ty]; }
+
+// ------------------------------------------------------------------ overlay
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function drawOverlay() {
+  const ov = $("ov"); ov.textContent = ""; if (!PS) return;
+  const u = 1 / view.s;  // one screen pixel in page points
+  const css = getComputedStyle(document.documentElement);
+  const cDim = css.getPropertyValue("--dim").trim() || "#13894a", cMark = css.getPropertyValue("--mark").trim() || "#c76d0e";
+  const showDims = mode === "calib";
+  if (showDims) for (const d of PS.dims) {
+    const sel = cal && cal.dim === d;
+    const a = d.ori === "H" ? [d.lo, d.c, d.hi, d.c] : [d.c, d.lo, d.c, d.hi];
+    el("line", { x1: a[0], y1: a[1], x2: a[2], y2: a[3], stroke: sel ? cMark : cDim, "stroke-width": sel ? 5 : 3.5, "stroke-opacity": sel ? 0.95 : 0.55, "vector-effect": "non-scaling-stroke", "stroke-linecap": "round" }, ov);
+    if (F.k) { const t = el("text", { x: (a[0] + a[2]) / 2, y: (a[1] + a[3]) / 2 - 4 * u, "font-size": 11 * u, "text-anchor": "middle", fill: cDim, "font-family": "IBM Plex Mono, monospace", "paint-order": "stroke", stroke: "#fff", "stroke-width": 3 * u }, ov); t.textContent = fmt(d.L / F.k, 2); }
+  }
+  for (const b of PS.barriers) el("line", { x1: b[0][0], y1: b[0][1], x2: b[1][0], y2: b[1][1], stroke: "#d0461a", "stroke-width": 2.5, "stroke-dasharray": "6 4", "vector-effect": "non-scaling-stroke" }, ov);
+  for (const r of results) {
+    if (r.fileId !== F.id || r.page !== PS.n) continue;
+    const hi = r.id === hiRow;
+    if (r.kind === "poly" || r.kind === "rect") el("polygon", { points: r.geom.pts.map((p) => p.join(",")).join(" "), fill: r.color, "fill-opacity": hi ? 0.32 : 0.16, stroke: r.color, "stroke-width": hi ? 3 : 2, "vector-effect": "non-scaling-stroke" }, ov);
+    const c = r.kind === "wand" ? [r.geom.cx, r.geom.cy] : centroid(r.geom.pts);
+    const a = areaM2(r);
+    const t = el("text", { x: c[0], y: c[1], "font-size": ($("stage").clientWidth < 600 ? 11 : 13) * u, "text-anchor": "middle", "dominant-baseline": "middle", fill: "#10181d", "font-weight": 600, "paint-order": "stroke", stroke: "#fff", "stroke-width": 4 * u, "font-family": "IBM Plex Sans Arabic, Tahoma, sans-serif" }, ov);
+    t.textContent = a == null ? r.name : `${r.name}: ${fmt(a)} م²`;
+  }
+  if (draft && draft.pts.length) {
+    const pts = draft.pts.concat(hover ? [hover] : []);
+    if (draft.kind === "rect" && pts.length === 2) { const q = rectPts(pts[0], pts[1]); el("polygon", { points: q.map((p) => p.join(",")).join(" "), fill: cMark, "fill-opacity": 0.15, stroke: cMark, "stroke-width": 2, "vector-effect": "non-scaling-stroke" }, ov); }
+    else el("polyline", { points: pts.map((p) => p.join(",")).join(" "), fill: draft.kind === "poly" ? cMark : "none", "fill-opacity": 0.12, stroke: draft.kind === "barrier" ? "#d0461a" : cMark, "stroke-width": 2, "stroke-dasharray": draft.kind === "barrier" ? "6 4" : "", "vector-effect": "non-scaling-stroke" }, ov);
+    for (const p of draft.pts) el("circle", { cx: p[0], cy: p[1], r: 3.5 * u, fill: "#fff", stroke: cMark, "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, ov);
+  }
+  if (cal && cal.pts) el("line", { x1: cal.pts[0][0], y1: cal.pts[0][1], x2: cal.pts[1][0], y2: cal.pts[1][1], stroke: cMark, "stroke-width": 4, "vector-effect": "non-scaling-stroke" }, ov);
+  if (hover && hover.snapped && mode !== "pan" && mode !== "wand") el("rect", { x: hover[0] - 5 * u, y: hover[1] - 5 * u, width: 10 * u, height: 10 * u, fill: "none", stroke: cMark, "stroke-width": 2, "vector-effect": "non-scaling-stroke" }, ov);
+}
+const centroid = (p) => [p.reduce((s, q) => s + q[0], 0) / p.length, p.reduce((s, q) => s + q[1], 0) / p.length];
+const rectPts = (a, b) => [[a[0], a[1]], [b[0], a[1]], [b[0], b[1]], [a[0], b[1]]];
+
+// ------------------------------------------------------------------ results
+function fileOf(r) { return files.find((f) => f.id === r.fileId); }
+function areaM2(r) { if (r.kind === "label") return r.areaM2; const f = fileOf(r); return f && f.k ? r.areaPt2 / (f.k * f.k) : null; }
+function addResult(kind, name, data) {
+  const r = Object.assign({ id: nextId++, fileId: F.id, page: PS.n, kind, name, color: COLORS[(nextId - 2) % COLORS.length], example: F.example }, data);
+  results.push(r); renderRows(); paintFills(); drawOverlay(); return r;
+}
+function renderRows() {
+  const tb = $("rows"); tb.textContent = "";
+  let total = 0, known = 0;
+  const multi = new Set(results.map((r) => r.fileId)).size > 1;
+  for (const r of results) {
+    const a = areaM2(r); if (a != null) { total += a; known++; }
+    const tr = document.createElement("tr"); tr.dataset.id = r.id;
+    const f = fileOf(r);
+    const src = { wand: "بنقرة", poly: "مضلع", rect: "مستطيل", label: "مكتوب على المخطط" }[r.kind] + (multi && f ? " · " + f.name : "") + (f && f.numPages > 1 ? ` · ص${r.page}` : "") + (r.example ? " · مثال" : "");
+    tr.innerHTML = `<td><span class="sw" style="background:${r.color}"></span><input aria-label="اسم المساحة" value=""><div class="src"></div></td>
+      <td class="a num">${a == null ? "—" : fmt(a)}</td><td><button class="x" aria-label="حذف">✕</button></td>`;
+    tr.querySelector("input").value = r.name;
+    tr.querySelector(".src").textContent = src;
+    tr.querySelector("input").addEventListener("input", (e) => { r.name = e.target.value; drawOverlay(); });
+    tr.querySelector(".x").addEventListener("click", () => { results = results.filter((q) => q !== r); renderRows(); paintFills(); drawOverlay(); });
+    tr.addEventListener("mouseenter", () => { hiRow = r.id; paintFills(); drawOverlay(); });
+    tr.addEventListener("mouseleave", () => { hiRow = null; paintFills(); drawOverlay(); });
+    tr.addEventListener("click", async (e) => { if (e.target.closest("input,button")) return; const f = fileOf(r); if (f && (f !== F || r.page !== PS.n)) { await showFile(f, r.page); renderChips(); } });
+    tb.appendChild(tr);
+  }
+  if (!results.length) { const tr = document.createElement("tr"); tr.innerHTML = `<td colspan="3" class="small muted">لا توجد مساحات بعد. اختر «غرفة بنقرة» واضغط داخل أي غرفة.</td>`; tb.appendChild(tr); }
+  else { const tr = document.createElement("tr"); tr.className = "total"; tr.innerHTML = `<td>الإجمالي</td><td class="a num">${known ? fmt(total) : "—"}</td><td></td>`; tb.appendChild(tr); }
+}
+function renderChips() {
+  const c = $("chips"); c.textContent = "";
+  for (const f of files) {
+    const b = document.createElement("button"); b.className = "chip"; b.setAttribute("aria-pressed", f === F ? "true" : "false");
+    b.innerHTML = (f.example ? '<span class="tag">مثال · </span>' : "") + "<span></span>"; b.lastChild.textContent = f.name;
+    b.addEventListener("click", async () => { await showFile(f, f.pageNo); renderChips(); });
+    c.appendChild(b);
+  }
+}
+function renderScale() {
+  const st = $("scaleState");
+  if (F && F.k) { st.textContent = F.kSrc === "auto" ? "تلقائي" : "محدد"; st.className = "state ok"; $("scaleInfo").innerHTML = (F.kInfo ? F.kInfo + "<br>" : "") + scaleText(F.k); }
+  else { st.textContent = "غير محدد"; st.className = "state warn"; $("scaleInfo").textContent = "نحتاج طول بُعد واحد معروف لنحوّل المخطط إلى أمتار. اختر «معايرة» واضغط على خط بُعد أخضر واكتب قيمته."; }
+  $("dimCount").textContent = PS ? (PS.dims.length ? `${PS.dims.length} خط بُعد في هذه الصفحة` : "لم أجد خطوط أبعاد؛ استخدم نقطتين بمسافة معروفة.") : "";
+  const ck = $("checks"); ck.textContent = "";
+  if (F && F.k && PS && PS.dims.length) {
+    const ds = PS.dims.slice().sort((a, b) => b.L - a.L).slice(0, 10);
+    const sp = document.createElement("span"); sp.textContent = "تحقق، أطوال الأبعاد بالمقياس الحالي:"; ck.appendChild(sp);
+    for (const d of ds) { const s = document.createElement("span"); s.className = "num"; s.textContent = fmt(d.L / F.k, 2); ck.appendChild(s); }
+  }
+}
+function renderLabels() {
+  const ul = $("labels"); ul.textContent = "";
+  const labs = PS ? PS.labels : [];
+  if (!labs.length) { const li = document.createElement("li"); li.className = "small muted"; li.textContent = "لم أجد مساحات مكتوبة كنص في هذه الصفحة."; ul.appendChild(li); return; }
+  for (const l of labs) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span><span class="num">${fmt(l.v, l.v % 1 ? 2 : 0)}</span> م² <span class="small muted">مكتوبة على المخطط</span></span><button class="btn small">أضف للجدول</button>`;
+    li.querySelector("button").addEventListener("click", () => addResult("label", "مساحة مكتوبة " + fmt(l.v, l.v % 1 ? 2 : 0), { areaM2: l.v, geom: { pts: [[l.x, l.y]] } }));
+    ul.appendChild(li);
+  }
+}
+function renderAll() { renderScale(); renderLabels(); renderRows(); drawOverlay(); setHint(); }
+
+// ------------------------------------------------------------------ modes & hints
+const HINTS = {
+  wand: "<b>غرفة بنقرة:</b> اضغط داخل أي غرفة أو منطقة مغلقة لحساب مساحتها. الأثاث والنصوص داخلها تُحسب ضمنها.",
+  poly: "<b>مضلع:</b> اضغط على الزوايا بالترتيب (يلتقط أطراف الخطوط)، ثم اضغط على النقطة الأولى أو Enter للإغلاق. Backspace يحذف آخر نقطة.",
+  rect: "<b>مستطيل:</b> اضغط على زاويتين متقابلتين.",
+  barrier: "<b>خط إغلاق:</b> اضغط نقطتين لرسم خط عبر باب مفتوح أو ممر، ليتوقف عنده الحساب بنقرة.",
+  calib: "<b>معايرة:</b> اضغط على خط بُعد أخضر واكتب قيمته بالمتر، أو اضغط نقطتين بينهما مسافة تعرفها.",
+  pan: "<b>تحريك:</b> اسحب المخطط، واستخدم العجلة أو إصبعين للتكبير.",
+};
+function setMode(m) {
+  mode = m; draft = null; flash = null;
+  for (const b of $("tools").querySelectorAll("button")) b.setAttribute("aria-pressed", b.dataset.mode === m ? "true" : "false");
+  $("stage").className = "stage " + (m === "pan" ? "pan" : "draw");
+  setHint(); paintFills(); drawOverlay();
+}
+function setHint() {
+  let h = HINTS[mode];
+  if (F && !F.k && mode !== "calib" && mode !== "pan") h = "<b>حدّد المقياس أولاً:</b> اختر «معايرة» واضغط على خط بُعد أخضر. المساحات تظهر بعدها بالمتر المربع.";
+  $("hint").innerHTML = h;
+}
+
+// ------------------------------------------------------------------ pointer handling
+const ptrs = new Map(); let gesture = null;
+const stage = $("stage");
+stage.addEventListener("pointerdown", (ev) => {
+  if (!PS) return; stage.setPointerCapture(ev.pointerId);
+  ptrs.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+  if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; gesture = { pinch: true, d: Math.hypot(a.x - b.x, a.y - b.y), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 }; return; }
+  gesture = { x0: ev.clientX, y0: ev.clientY, tx: view.tx, ty: view.ty, moved: false };
+});
+stage.addEventListener("pointermove", (ev) => {
+  if (!PS) return;
+  const p = ptrs.get(ev.pointerId); if (p) { p.x = ev.clientX; p.y = ev.clientY; }
+  if (gesture && gesture.pinch && ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()], d = Math.hypot(a.x - b.x, a.y - b.y), r = stage.getBoundingClientRect();
+    zoomAt(d / gesture.d, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); gesture.d = d; return;
+  }
+  if (gesture && !gesture.pinch) {
+    const dx = ev.clientX - gesture.x0, dy = ev.clientY - gesture.y0;
+    if (gesture.moved || Math.hypot(dx, dy) > 6) { gesture.moved = true; stage.classList.add("panning"); view.tx = gesture.tx + dx; view.ty = gesture.ty + dy; applyView(); return; }
+  }
+  const pt = toPt(ev); const sp = (mode === "poly" || mode === "rect" || mode === "barrier" || mode === "calib") ? snap(pt, Math.min(8 / view.s, 6)) : null;  // <= 8 px on screen and <= 6 pt on paper
+  hover = sp ? Object.assign(sp.slice(), { snapped: true }) : pt;
+  if (draft && draft.kind === "poly" && draft.pts.length >= 3) { const f = draft.pts[0]; if (Math.hypot(f[0] - pt[0], f[1] - pt[1]) * view.s < 12) hover = Object.assign(f.slice(), { snapped: true }); }
+  status(pt); drawOverlay();
+});
+const endPtr = (ev) => {
+  const g = gesture; ptrs.delete(ev.pointerId); stage.classList.remove("panning");
+  if (ptrs.size === 0) gesture = null;
+  if (!g || g.pinch || g.moved || ev.type === "pointercancel") return;
+  click(toPt(ev));
+};
+stage.addEventListener("pointerup", endPtr);
+stage.addEventListener("pointercancel", endPtr);
+stage.addEventListener("pointerleave", () => { hover = null; $("status").textContent = ""; drawOverlay(); });
+stage.addEventListener("wheel", (ev) => { if (!PS) return; ev.preventDefault(); const r = stage.getBoundingClientRect(); zoomAt(Math.exp(-ev.deltaY * 0.0015), ev.clientX - r.left, ev.clientY - r.top); }, { passive: false });
+stage.addEventListener("dblclick", (ev) => { if (draft && draft.kind === "poly" && draft.pts.length >= 3) finishPoly(); });
+
+function status(pt) {
+  let s = "";
+  if (draft && draft.kind === "poly" && draft.pts.length >= 2 && F.k) s = "المساحة الحالية: " + fmt(shoelace(draft.pts.concat([hover || pt])) / F.k / F.k) + " م²";
+  else if (draft && (draft.kind === "rect") && draft.pts.length === 1 && F.k) s = "المساحة: " + fmt(shoelace(rectPts(draft.pts[0], hover || pt)) / F.k / F.k) + " م²";
+  else if (draft && draft.pts.length === 1 && F.k) { const a = draft.pts[0], b = hover || pt; s = "الطول: " + fmt(Math.hypot(a[0] - b[0], a[1] - b[1]) / F.k) + " م"; }
+  $("status").textContent = s;
+}
+
+function click(pt) {
+  const p = hover && hover.snapped ? [hover[0], hover[1]] : pt;
+  if (mode === "pan") return;
+  if (mode === "wand") {
+    flash = null;
+    const r = wandAt(pt);
+    if (!r) return;
+    if (r.err) { toast(r.err, true); return; }
+    if (r.leak) { flash = r.runs; paintFills(); toast("المنطقة غير مغلقة: التسرّب ظاهر بالأحمر. ارسم «خط إغلاق» عبر الفتحة ثم اضغط مرة ثانية، أو استخدم «مضلع».", true, 7000); return; }
+    const n = results.filter((q) => q.kind === "wand").length + 1;
+    addResult("wand", "غرفة " + n, { areaPt2: r.areaPt2, geom: r.runs });
+    if (!F.k) toast("أُضيفت. حدّد المقياس لتظهر المساحة بالمتر المربع.");
+    return;
+  }
+  if (mode === "calib") {
+    if (!draft) {
+      const tol = 9 / view.s; let best = null, bd = tol;
+      for (const d of PS.dims) {
+        const along = d.ori === "H" ? pt[0] : pt[1], perp = d.ori === "H" ? pt[1] : pt[0];
+        if (along >= d.lo - tol && along <= d.hi + tol && Math.abs(perp - d.c) < bd) { bd = Math.abs(perp - d.c); best = d; }
+      }
+      if (best && !(hover && hover.snapped && bd > 3 / view.s)) { startCal({ L: best.L, dim: best }); return; }
+      draft = { kind: "calib2", pts: [p] }; drawOverlay(); return;
+    }
+    const a = draft.pts[0]; draft = null;
+    const L = Math.hypot(p[0] - a[0], p[1] - a[1]); if (L < 1) return;
+    startCal({ L, pts: [a, p] }); return;
+  }
+  if (mode === "barrier") {
+    if (!draft) { draft = { kind: "barrier", pts: [p] }; drawOverlay(); return; }
+    PS.barriers.push([draft.pts[0], p]); draft = null; rebuildMask(PS); drawOverlay(); toast("أُضيف خط إغلاق. الآن اضغط «غرفة بنقرة» داخل المنطقة."); return;
+  }
+  if (mode === "rect") {
+    if (!draft) { draft = { kind: "rect", pts: [p] }; drawOverlay(); return; }
+    const q = rectPts(draft.pts[0], p); draft = null;
+    if (shoelace(q) < 1) return;
+    addResult("rect", "مستطيل " + (results.filter((r) => r.kind === "rect").length + 1), { areaPt2: shoelace(q), geom: { pts: q } }); return;
+  }
+  if (mode === "poly") {
+    if (!draft) { draft = { kind: "poly", pts: [p] }; drawOverlay(); return; }
+    const f = draft.pts[0];
+    if (draft.pts.length >= 3 && Math.hypot(f[0] - p[0], f[1] - p[1]) * view.s < 12) { finishPoly(); return; }
+    draft.pts.push(p); drawOverlay();
+  }
+}
+function finishPoly() {
+  const q = draft.pts; draft = null; if (q.length < 3) return;
+  addResult("poly", "مضلع " + (results.filter((r) => r.kind === "poly").length + 1), { areaPt2: shoelace(q), geom: { pts: q } });
+}
+function startCal(c) {
+  cal = c; $("calBox").hidden = false; $("calPt").textContent = fmt(c.L, 2);
+  const v = $("calVal"); v.value = ""; v.focus(); drawOverlay();
+}
+function applyCal() {
+  const v = parseNum($("calVal").value);
+  if (!cal || !(v > 0)) { toast("اكتب طولاً صحيحاً بالمتر، مثل 10.2", true); return; }
+  applyScale(cal.L / v, `يدوي من بُعد طوله ${fmt(v, 2)} م`, "manual");
+  cal = null; $("calBox").hidden = true; toast("تم تحديد المقياس. تحقق من الأرقام الخضراء على الأبعاد."); drawOverlay();
+}
+$("calApply").addEventListener("click", applyCal);
+$("calVal").addEventListener("keydown", (e) => { if (e.key === "Enter") applyCal(); if (e.key === "Escape") { cal = null; $("calBox").hidden = true; drawOverlay(); } });
+$("calCancel").addEventListener("click", () => { cal = null; $("calBox").hidden = true; drawOverlay(); });
+$("calStart").addEventListener("click", () => setMode("calib"));
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.closest && e.target.closest("input,textarea")) return;
+  if (e.key === "Escape") { draft = null; flash = null; paintFills(); drawOverlay(); }
+  else if (e.key === "Enter" && draft && draft.kind === "poly") finishPoly();
+  else if (e.key === "Backspace" && draft && draft.pts.length) { draft.pts.pop(); if (!draft.pts.length) draft = null; drawOverlay(); e.preventDefault(); }
+});
+
+// ------------------------------------------------------------------ toolbar, files, copy
+for (const b of $("tools").querySelectorAll("button")) b.addEventListener("click", () => setMode(b.dataset.mode));
+$("zIn").addEventListener("click", () => { const r = stage.getBoundingClientRect(); zoomAt(1.4, r.width / 2, r.height / 2); });
+$("zOut").addEventListener("click", () => { const r = stage.getBoundingClientRect(); zoomAt(1 / 1.4, r.width / 2, r.height / 2); });
+$("zFit").addEventListener("click", () => PS && fit());
+$("prevPg").addEventListener("click", async () => { if (F && F.pageNo > 1) { await showFile(F, F.pageNo - 1); } });
+$("nextPg").addEventListener("click", async () => { if (F && F.pageNo < F.numPages) { await showFile(F, F.pageNo + 1); } });
+$("file").addEventListener("change", (e) => { if (e.target.files.length) handleFiles(e.target.files); e.target.value = ""; });
+let dragDepth = 0;
+document.addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("drop").hidden = false; });
+document.addEventListener("dragleave", (e) => { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) $("drop").hidden = true; });
+document.addEventListener("dragover", (e) => e.preventDefault());
+document.addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("drop").hidden = true; if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+$("copyBtn").addEventListener("click", () => {
+  const lines = ["الاسم\tالمساحة م²\tالملف\tالصفحة"];
+  let t = 0;
+  for (const r of results) { const a = areaM2(r); if (a != null) t += a; const f = fileOf(r); lines.push([r.name, a == null ? "" : a.toFixed(2), f ? f.name : "", r.page].join("\t")); }
+  lines.push(["الإجمالي", t.toFixed(2), "", ""].join("\t"));
+  const text = lines.join("\n"), ta = $("copyArea");
+  const fallback = () => { ta.hidden = false; ta.value = text; ta.focus(); ta.select(); toast("انسخ النص المحدد (Ctrl+C) والصقه في Excel."); };
+  try { navigator.clipboard.writeText(text).then(() => { ta.hidden = true; toast("تم النسخ. الصقه في Excel أو عرض السعر."); }, fallback); } catch (e) { fallback(); }
+});
+let clearArm = 0;
+$("clearBtn").addEventListener("click", () => {
+  if (!results.length) return;
+  if (Date.now() - clearArm > 4000) { clearArm = Date.now(); $("clearAsk").textContent = "اضغط مرة ثانية للتأكيد"; setTimeout(() => ($("clearAsk").textContent = ""), 4000); return; }
+  results = []; clearArm = 0; $("clearAsk").textContent = ""; renderRows(); paintFills(); drawOverlay();
+});
+window.addEventListener("resize", () => { if (PS) applyView(); });
+
+// ------------------------------------------------------------------ start with the example
+async function start() {
+  setMode("wand"); renderRows();
+  if (!pdfjs) { toast("تعذّر تحميل قارئ PDF. تأكد من الاتصال بالإنترنت ثم أعد تحميل الصفحة.", true, 10000); return; }
+  const bin = atob(SAMPLE_B64), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const f = await openPdf(bytes, "مثال - مقهى صغير.pdf", true);
+  if (!f) return;
+  for (const [x, y, name] of SAMPLE_SEEDS) { const r = wandAt([x, y]); if (r && r.areaPt2) addResult("wand", name, { areaPt2: r.areaPt2, geom: r.runs }); }
+  renderChips(); renderAll();
+}
+// test hook (harmless for users)
+window.__msaha = { files: () => files, results: () => results, toScreen: (p) => toScreen(p), areaM2, page: () => PS, view };
+start();
+})();
+</script>
